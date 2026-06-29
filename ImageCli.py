@@ -2,8 +2,57 @@
 
 import os
 import sys
+import cv2   
 import argparse
 import argcomplete
+
+def load_image(filename):
+    """Load image from disk"""
+
+    image = cv2.imread(filename)
+
+    if image is None:
+        print(f"Error: Could not load image '{filename}'")
+        sys.exit(1)
+
+    print("Image loaded successfully")
+
+    return image
+
+def save_image(image, output_path):
+    """Save image to disk"""
+
+    isSaveFileSuccess = cv2.imwrite(output_path, image)
+
+    if not isSaveFileSuccess:
+        print(f"Error: Could not save image to '{output_path}'")
+        sys.exit(1)
+
+    print(f"Image saved successfully to '{output_path}'")
+
+
+def show_image_info(image):
+    """Display image metadata"""
+
+    height, width = image.shape[:2]
+
+    if len(image.shape) == 2:
+        channels = 1
+    else:
+        channels = image.shape[2]
+
+    dtype = image.dtype
+
+    size_mb = image.nbytes / (1024 * 1024)
+
+    print("\n----- Image Information -----")
+    print(f"Width       : {width} px")
+    print(f"Height      : {height} px")
+    print(f"Channels    : {channels}")
+    print(f"Data Type   : {dtype}")
+    print(f"Memory Size : {size_mb:.2f} MB")
+    print("-----------------------------")
+
 
 def validate_args(args):
 
@@ -96,6 +145,34 @@ def create_parser():
 
     return parser
 
+def process_image(args):
+    """Main image processing piple"""
+    image = load_image(args.input_file)
+
+    if args.info:
+        show_image_info(image)
+        return
+    
+    if args.resize:
+        print("Applying resize")
+
+    if args.crop:
+        print("Applying crop")
+
+    if args.flip:
+        print("Applying flip")
+
+    if args.rotate:
+        print("Applying rotation")
+
+    if args.grayscale:
+        print("Applying grayscale")
+
+    if args.convert_rgb:
+        print("Converting to RGB")
+
+    save_image(image, args.output)
+
 def main():
     parser = create_parser()
 
@@ -104,10 +181,11 @@ def main():
     args = parser.parse_args()
 
     if args.output is None:
-        args.output = args.input_file
+        args.output = "output_" + os.path.basename(args.input_file)
 
     validate_args(args)
-    print(args)
+
+    process_image(args)
 
 if __name__ == "__main__":
     main()
