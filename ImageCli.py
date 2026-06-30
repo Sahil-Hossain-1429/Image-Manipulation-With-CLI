@@ -2,9 +2,10 @@
 
 import os
 import sys
-import cv2   
+import cv2
 import argparse
 import argcomplete
+
 
 def load_image(filename):
     """Load image from disk"""
@@ -18,6 +19,60 @@ def load_image(filename):
     print("Image loaded successfully")
 
     return image
+
+def generate_output_filename(args):
+    """Generate output filename based on applied operations"""
+
+    operations = []
+
+    # standard flags
+    if args.resize:
+        operations.append("resize")
+
+    if args.crop:
+        operations.append("crop")
+
+    # include flip choice
+    if args.flip:
+        if args.flip == "h":
+            operations.append("flipH")
+        elif args.flip == "v":
+            operations.append("flipV")
+        elif args.flip == "b":
+            operations.append("flipB")
+
+    # include rotation angle
+    if args.rotate:
+        operations.append(f"rotate{args.rotate}")
+
+    if args.grayscale:
+        operations.append("grayscale")
+
+    if args.convert_rgb:
+        operations.append("rgb")
+
+    if args.convert_bgr:
+        operations.append("bgr")
+
+    # no operations
+    if not operations:
+        operations.append("output")
+
+    operation_name = "_".join(operations)
+
+    # preserve original extension
+    _, ext = os.path.splitext(args.input_file)
+
+    base_filename = f"{operation_name}Output"
+    output_filename = f"{base_filename}{ext}"
+
+    # check duplicates
+    counter = 1
+    while os.path.exists(output_filename):
+        output_filename = f"{base_filename}{counter}{ext}"
+        counter += 1
+
+    return output_filename
 
 def save_image(image, output_path):
     """Save image to disk"""
@@ -42,7 +97,6 @@ def show_image_info(image):
         channels = image.shape[2]
 
     dtype = image.dtype
-
     size_mb = image.nbytes / (1024 * 1024)
 
     print("\n----- Image Information -----")
@@ -56,9 +110,9 @@ def show_image_info(image):
 
 def validate_args(args):
 
-    #file existence
+    # file existence
     if not os.path.exists(args.input_file):
-        print(f"Error: File '{args.input_file}' does not exits")
+        print(f"Error: File '{args.input_file}' does not exist")
         sys.exit(1)
 
     # resize validation
@@ -69,7 +123,7 @@ def validate_args(args):
             print("Error: Resize dimensions must be positive")
             sys.exit(1)
 
-    # crop validaiton
+    # crop validation
     if args.crop:
         x, y, width, height = args.crop
 
@@ -77,23 +131,21 @@ def validate_args(args):
             print("Error: Crop width/height must be positive")
             sys.exit(1)
 
-    
 
 def create_parser():
     parser = argparse.ArgumentParser(
         description="Image processing command line tool"
     )
 
-    # positional argument (required)
     parser.add_argument(
         "input_file",
-        help = "Path to input image file"
+        help="Path to input image file"
     )
 
     parser.add_argument(
         "-o",
         "--output",
-        help="Output file path (defaults to input file)"
+        help="Custom output file path (optional)"
     )
 
     parser.add_argument(
@@ -106,7 +158,7 @@ def create_parser():
         "--resize",
         nargs=2,
         type=int,
-        metavar=("WIDTH","HEIGHT"),
+        metavar=("WIDTH", "HEIGHT"),
         help="Resize image"
     )
 
@@ -114,20 +166,20 @@ def create_parser():
         "--crop",
         nargs=4,
         type=int,
-        metavar=("X","Y","WIDTH","HEIGHT"),
-        help="Crop Image"
+        metavar=("X", "Y", "WIDTH", "HEIGHT"),
+        help="Crop image"
     )
 
     parser.add_argument(
         "--flip",
         choices=["h", "v", "b"],
-         help="Choose flip direction: horizontal, vertical, or both"
+        help="Choose flip direction: horizontal, vertical, or both"
     )
 
     parser.add_argument(
         "--rotate",
         type=int,
-        choices=[90,180,270],
+        choices=[90, 180, 270],
         help="Rotation angle (90, 180, or 270)"
     )
 
@@ -148,19 +200,24 @@ def create_parser():
         action="store_true",
         help="Convert image to BGR"
     )
+
     return parser
+
 
 def crop_image(image, x, y, width, height):
     """Crop image"""
-    cropped_image = image[y:y+height, x:x+width]
+
+    cropped_image = image[y:y + height, x:x + width]
 
     print(f"Image cropped: x={x}, y={y}, width={width}, height={height}")
 
     return cropped_image
 
+
 def resize_image(image, width, height):
     """Resize image to specified dimensions"""
-    resized_image = cv2.resize(image, (width,height))
+
+    resized_image = cv2.resize(image, (width, height))
 
     print(f"Image resized to {width} x {height}")
 
@@ -169,30 +226,38 @@ def resize_image(image, width, height):
 
 def flip_image(image, direction):
     """Flip image based on the specified direction"""
+
     if direction == "h":
-        flipped_image = cv2.flip(image,1)
-        print(f"Image flipped direction: Horizontal")
+        flipped_image = cv2.flip(image, 1)
+        print("Image flipped direction: Horizontal")
+
     elif direction == "v":
-        flipped_image = cv2.flip(image,0)
-        print(f"Image flipped direction: Vertical")
+        flipped_image = cv2.flip(image, 0)
+        print("Image flipped direction: Vertical")
+
     else:
-        flipped_image = cv2.flip(image,-1)
-        print(f"Image flipped direction: Both Horizontal and Vertical")
+        flipped_image = cv2.flip(image, -1)
+        print("Image flipped direction: Both Horizontal and Vertical")
 
     return flipped_image
-        
+
+
 def rotate_image(image, angle):
     """Rotate image specified angle"""
+
     if angle == 90:
         rotated_image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+
     elif angle == 180:
         rotated_image = cv2.rotate(image, cv2.ROTATE_180)
+
     else:
         rotated_image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
     print(f"Image rotated: {angle} degrees")
 
     return rotated_image
+
 
 def grayscale_image(image):
     """Convert image to grayscale"""
@@ -203,6 +268,7 @@ def grayscale_image(image):
 
     return gray_image
 
+
 def convert_bgr_image(image):
     """Convert image from RGB to BGR"""
 
@@ -211,6 +277,7 @@ def convert_bgr_image(image):
     print("Image converted to BGR")
 
     return bgr_image
+
 
 def convert_rgb_image(image):
     """Convert image from BGR to RGB"""
@@ -221,14 +288,16 @@ def convert_rgb_image(image):
 
     return rgb_image
 
+
 def process_image(args):
-    """Main image processing piple"""
+    """Main image processing pipeline"""
+
     image = load_image(args.input_file)
 
     if args.info:
         show_image_info(image)
         return
-    
+
     if args.resize:
         width, height = args.resize
         image = resize_image(image, width, height)
@@ -255,20 +324,21 @@ def process_image(args):
     save_image(image, args.output)
 
 
-
 def main():
     parser = create_parser()
 
     argcomplete.autocomplete(parser)
-    
+
     args = parser.parse_args()
 
+    # auto-generate output filename if user does not provide one
     if args.output is None:
-        args.output = "output_" + os.path.basename(args.input_file)
+        args.output = generate_output_filename(args)
 
     validate_args(args)
 
     process_image(args)
+
 
 if __name__ == "__main__":
     main()
